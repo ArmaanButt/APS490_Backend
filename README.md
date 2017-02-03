@@ -3,6 +3,7 @@
 - `python 3.4.3`
 - `pyvenv`
 - MYSQL server
+- Docker
 
 # Setup
 
@@ -12,8 +13,14 @@
 
 # Running the app
 
+## Locally
+
 - Activate venv
 - `python run.py`
+
+## Inside docker container
+
+- `docker-compose up -d`
 
 # Running the tests
 
@@ -27,4 +34,3 @@
 - Collection, detail class
 - Tests
 - DB migration
-
