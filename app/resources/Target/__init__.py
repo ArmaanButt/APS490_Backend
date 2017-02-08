@@ -34,6 +34,7 @@ class TargetsCollection(Resource):
             updated_at = datetime.datetime.utcnow()
             new_target = TargetModel(
                 is_working=convert_to_boolean(data.get('is_working')),
+                image_name=data.get('image_name'),
                 size=data.get('size'),
                 is_enabled=convert_to_boolean(data.get('is_enabled')),
                 updated_at=updated_at,

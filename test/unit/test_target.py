@@ -116,7 +116,7 @@ class TargetEndpointTestCase(TestCase):
             )
         )
         id = data1['id']
-        new_data = {'is_enabled': True, 'id': 12}
+        new_data = {'is_enabled': True, 'id': 12, 'image_name': 'abc.jpg'}
         response = self.test_client.patch(
             D_URL.format(id=id),
             data=json.dumps(new_data),
@@ -129,6 +129,7 @@ class TargetEndpointTestCase(TestCase):
         self.assertEqual(data2['is_working'], self.data2['is_working'])
         self.assertEqual(data2['size'], self.data2['size'])
         self.assertEqual(data2['is_enabled'], new_data['is_enabled'])
+        self.assertEqual(data2['image_name'], new_data['image_name'])
         self.assertNotEqual(data2['updated_at'], data1['updated_at'])
 
     def test_patch_detail_invalid(self):
