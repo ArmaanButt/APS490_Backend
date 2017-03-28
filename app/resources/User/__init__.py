@@ -32,7 +32,8 @@ class UsersCollection(Resource):
         try:
             validate_data(schema=schema_resource, params=params)
             password = params.get('password').encode('utf-8')
-            hashed = bcrypt.hashpw(password, bcrypt.gensalt())
+            # hashed = bcrypt.hashpw(password, bcrypt.gensalt())
+            hashed = password
             new_user = UserModel(
                 username=params.get('username'),
                 password=hashed,
