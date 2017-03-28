@@ -32,6 +32,7 @@ from app.resources.User import UsersCollection, UsersDetail
 from app.resources.Target import TargetsCollection, TargetsDetail
 from app.resources.Session import SessionsCollection, SessionsDetail
 from app.resources.Shot import ShotsCollection, ShotsDetail
+from app.resources.Auth import AuthEndpoint
 
 
 api.add_resource(UsersCollection, '/users')
@@ -45,3 +46,5 @@ api.add_resource(SessionsDetail, '/sessions/<int:id>')
 
 api.add_resource(ShotsCollection, '/shots')
 api.add_resource(ShotsDetail, '/shots/<int:id>')
+
+api.add_resource(AuthEndpoint, '/authenticate')
