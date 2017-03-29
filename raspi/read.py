@@ -1,6 +1,7 @@
 from serial import Serial
 from doctest import testmod
-from math import sqrt
+from math import sqrt, degrees, atan, cos, radians, sin
+from raspi.comm import post_to_api
 
 # S1:0|1|2|3....255;
 # S2:0|1|2|3....255;
@@ -44,13 +45,18 @@ def get_clusters(a, range_start=0, range_end=1500):
     >>> res = get_clusters(a)
     >>> res
     [{'cluster_coordinate': 1.0, 'cluster': [1023, 983], 'cluster_mean': 1003.0}, {'cluster_coordinate': 3.5, 'cluster': [834, 675, 698], 'cluster_mean': 735.6666666666666}, {'cluster_coordinate': 7.5, 'cluster': [456, 234, 324, 456, 363], 'cluster_mean': 366.6}, {'cluster_coordinate': 11.0, 'cluster': [1023, 1045], 'cluster_mean': 1034.0}, {'cluster_coordinate': 14.0, 'cluster': [982, 763, 674, 743], 'cluster_mean': 806.3333333333334}]
+
+
+    >>> a = [1023, 983, 834]
+    >>> res = get_clusters(a, range_start=0, range_end=700)
+    >>> res
     """
     if not a:
         return []
 
     res = []
     for cluster, cluster_coordinate, cluster_mean in parse(a, 3):
-        if range_start < cluster_mean < range_end:
+        if range_start < cluster_mean < range_end and len(cluster) > 50:
             res.append({
                 'cluster': cluster[:],
                 'cluster_coordinate': cluster_coordinate,
@@ -109,8 +115,8 @@ def get_sums(a, chunk_size):
 
 def read_from_serial():
     ser = Serial(
-        # port='/dev/cu.usbmodem1411',
-        port='/dev/ttyACM0',
+        port='/dev/cu.usbmodem1411',
+        # port='/dev/ttyACM0',
         baudrate=250000,
         timeout=1,
     )
@@ -122,19 +128,54 @@ def read_from_serial():
     while True:
         line = ser.readline()
         arr = get_vals(line)
-        res = get_clusters(arr, range_start=400, range_end=700)
+        res = get_clusters(arr, range_start=0, range_end=600)
         val = 0
 
         print(arr)
+        # print(res)
         if res:
             val = res[0]
             print('coordinate')
+            print(val['cluster_mean'])
             print(val['cluster_coordinate'])
+
+            x_center = val['cluster_coordinate'] * 2 / 256
+            l_shadow = len(val['cluster']) * 2 / 256
+            distance_from_src = 30.28
+            diameter_projectile = 0.9
+
+            print('l_shadow')
+            print(l_shadow)
+
+            print(post_process(
+                x_center=x_center,
+                l_shadow=l_shadow,
+                distance_from_src=distance_from_src,
+                diameter_projectile=diameter_projectile,
+            ))
         # else:
         #     print('no clusters in range')
 
-
     ser.close()
+
+
+def post_process(x_center, l_shadow, distance_from_src=30.28, diameter_projectile=0.556, axis=0):
+    """
+    >>> post_process(x_center=2.4, l_shadow=0.7)
+    >>> post_process(x_center=5.5, l_shadow=0.7)
+    >>> post_process(x_center=10.0, l_shadow=0.7)
+    >>> post_process(x_center=15.0, l_shadow=0.7)
+    >>> post_process(x_center=20.0, l_shadow=0.7)
+    """
+    d_total = sqrt((distance_from_src**2) + (x_center**2))
+    theta_center = atan(x_center/distance_from_src)
+    l_theoretical_shadow = l_shadow * cos(theta_center)
+    d_total += l_shadow * sin(theta_center)
+    d = (diameter_projectile * d_total) / l_theoretical_shadow
+    y = d * cos(theta_center)
+    x = d * sin(theta_center)
+
+    return (x, y) if axis else (y, x)
 
 
 def read():
