@@ -33,7 +33,9 @@ class CurrentSessionModel(db.Model):
     __tablename__ = 'current_session'
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
-    current_session_id = db.Column(db.Integer, nullable=False)
+    session_id = db.Column(db.Integer, nullable=False)
+    user_id = db.Column(db.Integer, nullable=False)
+    target_id = db.Column(db.Integer, nullable=False)
 
 
 schema_input = AuthSchemaInput()
@@ -75,23 +77,28 @@ class AuthEndpoint(Resource):
             db.session.add(new_session)
             db.session.commit()
             session_query = SessionModel.query.get(new_session.id)
-            current_session_id = session_query.id
 
             # creates or updates the current session id
             current_session_query = CurrentSessionModel.query.first()
             if not current_session_query:
                 new_entry = CurrentSessionModel(
-                    current_session_id=current_session_id,
+                    session_id=session_query.id,
+                    user_id=session_query.user_id,
+                    target_id=session_query.target_id,
                 )
                 db.session.add(new_entry)
             else:
-                new_data = {'current_session_id': current_session_id}
+                new_data = {
+                    'session_id': session_query.id,
+                    'user_id': session_query.user_id,
+                    'target_id': session_query.target_id,
+                }
                 update_model(resource=new_data, model=current_session_query)
             db.session.commit()
 
             results = schema_output.dump({
-                'session_id': current_session_id,
-                'user_id': user_id,
+                'session_id': session_query.id,
+                'user_id': session_query.user_id,
                 'username': user_query.username,
                 'role': user_query.role,
             }).data

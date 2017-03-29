@@ -8,6 +8,7 @@ from app import db
 from .models import ShotModel, ShotSchemaResource, ShotSchemaParams
 from marshmallow import ValidationError
 from app.utils.utils import validate_data, update_model
+from app.resources.Auth import CurrentSessionModel
 
 
 schema_resource = ShotSchemaResource()
@@ -29,13 +30,20 @@ class ShotsCollection(Resource):
 
     def post(self):
         data = request.get_json()
+
+        # need to have a current session
+        current_session_query = CurrentSessionModel.query.first()
+        if not current_session_query:
+            resp = jsonify({'error': 'No current session'})
+            resp.status_code = 400
+            return resp
+
         try:
-            validate_data(schema=schema_resource, params=data)
             updated_at = datetime.datetime.utcnow()
             new_shot = ShotModel(
-                user_id=data.get('user_id'),
-                target_id=data.get('target_id'),
-                session_id=data.get('session_id'),
+                user_id=current_session_query.user_id,
+                target_id=current_session_query.target_id,
+                session_id=current_session_query.session_id,
                 coordinate_x=data.get('coordinate_x'),
                 coordinate_y=data.get('coordinate_y'),
                 updated_at=updated_at,
