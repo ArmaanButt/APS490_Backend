@@ -1,7 +1,8 @@
 from serial import Serial
 from doctest import testmod
 from math import sqrt, degrees, atan, cos, radians, sin
-from raspi.comm import post_to_api
+# from . import post_to_api
+from datetime import datetime
 
 # S1:0|1|2|3....255;
 # S2:0|1|2|3....255;
@@ -10,6 +11,12 @@ from raspi.comm import post_to_api
 
 # Reading from sensors
 # S:a0|a1| ...... d0|d1| ... d255|\n
+cache = {
+    'x': 0,
+    'y': 0,
+    'time': datetime.utcnow()
+}
+
 
 
 def stat(lst):
@@ -31,12 +38,14 @@ def parse(lst, n):
         mean, stdev = stat(cluster)
 
         if abs(mean - val) > n * stdev:
-            yield cluster, cluster_index + len(cluster) / 2, mean
+            # yield cluster, cluster_index + len(cluster) / 2, mean
+            yield cluster, cluster_index, mean
             cluster_index += len(cluster)
             cluster[:] = []
 
         cluster.append(val)
-    yield cluster, cluster_index + len(cluster) / 2, mean
+    # yield cluster, cluster_index + len(cluster) / 2, mean
+    yield cluster, cluster_index, mean
 
 
 def get_clusters(a, range_start=0, range_end=1500):
@@ -113,53 +122,85 @@ def get_sums(a, chunk_size):
     return index_sum_map
 
 
-def read_from_serial():
-    ser = Serial(
+def read():
+    ser1 = Serial(
         port='/dev/cu.usbmodem1411',
         # port='/dev/ttyACM0',
         baudrate=250000,
         timeout=1,
     )
+    ser2 = Serial(
+        port='/dev/cu.usbmodem1421',
+        # port='/dev/ttyACM0',
+        baudrate=250000,
+        timeout=1,
+    )
+    read_from_serial(ser1, ser2)
+    ser1.close()
+    ser2.close()
+
+
+def read_from_serial(ser1, ser2):
     # to ignore garbage values
-    ser.readline()
+    ser1.readline()
     # for the string 'Reading from sensors'
-    ser.readline()
+    ser1.readline()
+
+    # to ignore garbage values
+    ser2.readline()
+    # for the string 'Reading from sensors'
+    ser2.readline()
+
+    counter = 1
 
     while True:
+        ser = ser2
+        if counter % 2 == 0:
+            ser = ser1
         line = ser.readline()
         arr = get_vals(line)
+
+        # 37
+        # arr[2523:2559] = arr[2560:2596]
+        #
+        # # 37
+        # arr[2779:2815] = arr[2816:2851]
+
         res = get_clusters(arr, range_start=0, range_end=600)
-        val = 0
 
         print(arr)
-        # print(res)
         if res:
             val = res[0]
             print('coordinate')
-            print(val['cluster_mean'])
+            # print(val['cluster_mean'])
             print(val['cluster_coordinate'])
+            print(val['cluster'])
+            print(len(val['cluster']))
 
             x_center = val['cluster_coordinate'] * 2 / 256
             l_shadow = len(val['cluster']) * 2 / 256
+
+            # print(x_center)
+            # print(l_shadow)
+
             distance_from_src = 30.28
             diameter_projectile = 0.9
+            #
+            if l_shadow < diameter_projectile:
+                print('l_shadow: {l_shadow}'.format(l_shadow=l_shadow))
+                continue
 
-            print('l_shadow')
-            print(l_shadow)
-
-            print(post_process(
+            x, y = post_process(
                 x_center=x_center,
                 l_shadow=l_shadow,
                 distance_from_src=distance_from_src,
                 diameter_projectile=diameter_projectile,
-            ))
-        # else:
-        #     print('no clusters in range')
+            )
 
-    ser.close()
+            print(y, x)
 
 
-def post_process(x_center, l_shadow, distance_from_src=30.28, diameter_projectile=0.556, axis=0):
+def post_process(x_center, l_shadow, distance_from_src=30.28, diameter_projectile=0.556):
     """
     >>> post_process(x_center=2.4, l_shadow=0.7)
     >>> post_process(x_center=5.5, l_shadow=0.7)
@@ -175,11 +216,12 @@ def post_process(x_center, l_shadow, distance_from_src=30.28, diameter_projectil
     y = d * cos(theta_center)
     x = d * sin(theta_center)
 
-    return (x, y) if axis else (y, x)
+    return x, y
 
 
-def read():
-    read_from_serial()
+def is_new(x, y, threshold=2):
+    pass
+
 
 if __name__ == '__main__':
     # testmod()
