@@ -4,7 +4,8 @@ from math import sqrt, degrees, atan, cos, radians, sin
 import requests
 
 # URL = 'http://localhost:5000/shots'
-# URL = 'http://192.168.99.100:5000/shots'
+URL = 'http://192.168.99.100:5000/shots'
+# URL = 'http://169.254.160.8:5000/shots'
 
 
 def post_to_api(coordinate_x, coordinate_y):
@@ -15,9 +16,8 @@ def post_to_api(coordinate_x, coordinate_y):
     response = requests.request(method='POST', url=URL, json=payload)
     print(response.json())
 
-
+# Reading from sensors
 # S:a0|a1| ...... d0|d1| ... d255|\n
-
 def stat(lst):
     """Calculate mean and std deviation from the input list."""
     n = float(len(lst))
@@ -37,11 +37,13 @@ def parse(lst, n):
         mean, stdev = stat(cluster)
 
         if abs(mean - val) > n * stdev:
+            # yield cluster, cluster_index + len(cluster) / 2, mean
             yield cluster, cluster_index, mean
             cluster_index += len(cluster)
             cluster[:] = []
 
         cluster.append(val)
+    # yield cluster, cluster_index + len(cluster) / 2, mean
     yield cluster, cluster_index, mean
 
 
@@ -120,38 +122,39 @@ def get_sums(a, chunk_size):
 
 
 def read():
-    ser1 = Serial(
-        port='/dev/cu.usbmodem1411',
+    ser2 = Serial(
+        port='/dev/cu.usbmodem1421',
         # port='/dev/ttyACM0',
         baudrate=115200,
         timeout=1,
     )
-    read_from_serial(ser1)
-    ser1.close()
+    read_from_serial(ser2)
+    ser2.close()
 
 
-def read_from_serial(ser1):
+def read_from_serial(ser2):
     # to ignore garbage values
-    ser1.readline()
+    ser2.readline()
     # for the string 'Reading from sensors'
-    ser1.readline()
+    ser2.readline()
+
 
     while True:
-        line = ser1.readline()
+        line = ser2.readline()
         arr = get_vals(line)
         res = get_clusters(arr, range_start=0, range_end=600)
+        # print(arr)
         if res:
             val = res[0]
+            print(val['cluster_coordinate'])
             x_center = val['cluster_coordinate'] * 2 / 256
             l_shadow = len(val['cluster']) * 2 / 256
 
-            # ser1
-            x_center += 2.4
-            distance_from_src = 29.6
+            x_center += 4.6
+            distance_from_src = 30.28
 
             diameter_projectile = 0.8
 
-            #
             if l_shadow < diameter_projectile:
                 print('l_shadow: {l_shadow}'.format(l_shadow=l_shadow))
                 continue
@@ -165,7 +168,7 @@ def read_from_serial(ser1):
 
             if x < 28 and y < 28:
                 print(x, y)
-                post_to_api(coordinate_x=x, coordinate_y=y)
+                post_to_api(coordinate_x=y, coordinate_y=x)
 
 
 def post_process(x_center, l_shadow, distance_from_src=30.28, diameter_projectile=0.556):

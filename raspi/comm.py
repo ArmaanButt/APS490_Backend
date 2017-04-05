@@ -1,7 +1,8 @@
 import requests
 
 # URL = 'http://169.254.160.8:5000/shots'
-URL = 'http://localhost:5000/shots'
+# URL = 'http://localhost:5000/shots'
+URL = 'http://192.168.99.100:5000/shots'
 
 
 def post_to_api(coordinate_x, coordinate_y):
